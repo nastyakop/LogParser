@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace LogParser
 {
     class Program
     {
-        static void ReadArgs(string[] args, ref Dictionary<String,String> files, ref string search)
+        static void ReadArgs(string[] args, ref Dictionary<String, String> files, ref string search)
         {
             for (int i = 0; i < args.Length; i++)
             {
@@ -27,7 +28,7 @@ namespace LogParser
                                 if ((attr & FileAttributes.Directory) == FileAttributes.Directory)
                                 {
                                     string dir = args[i + 1];
-                                    files = Directory.EnumerateFiles(dir, "*.log")
+                                    files = Directory.EnumerateFiles(dir, "*") //все файлы директории
                                         .ToDictionary(f => f, File.ReadAllText);
                                 }
                                 else
@@ -51,11 +52,60 @@ namespace LogParser
             }
         }
 
+        static List<string> Search(Dictionary<String, String> files, string search)
+        {
+            List<string> result = new List<string>();
+
+            Regex regExpr = new Regex(search, RegexOptions.IgnoreCase);
+            
+            foreach (var f in files)
+            {
+                string text = f.Value;
+                string fileName = f.Key;
+                List<string> rowsInFile = FormRows(text);
+
+                MatchCollection matches = regExpr.Matches(text);
+                foreach (Match match in matches)
+                {
+                    GroupCollection groups = match.Groups;
+                    int position = groups[0].Index;
+
+                    string rowValue = FormResult(text, position, rowsInFile);
+                    result.Add(" " + fileName + " ::" + rowValue);
+                }
+            }
+            return result;
+        }
+        /// <summary>
+        /// Возвращает номер строки и строку с найденном паттерном
+        /// </summary>
+        static string FormResult(string text, int symbolsBeforeEntry, List<string> rows)
+        {
+            string frag = text.Remove(symbolsBeforeEntry);
+            Regex regExpr = new Regex("(\\r\\n)");
+            MatchCollection matches = regExpr.Matches(frag);
+
+            int rowNumber = matches.Count;
+
+            return " " + (rowNumber + 1) + " : " + rows[rowNumber]; ;
+        }
+        /// <summary>
+        /// формирует список строк в файле
+        /// </summary>
+        static List<string> FormRows(string text)
+        {
+            Regex regExpr = new Regex("(\\r\\n)");
+            List<string> rows = regExpr.Split(text).ToList();
+            rows.RemoveAll(x => x.Contains("\r\n"));
+            return rows;
+        }
+
         static void Main(string[] args)
         {
             Dictionary<String, String> files = new Dictionary<string, string>();
             string search = "";
             ReadArgs(args, ref files, ref search);
+            List<string> strs = Search(files, search);
 
         }
     }

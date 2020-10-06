@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LogParser": {
+      "commandName": "Project",
+      "commandLineArgs": "-f \"D:\\test.txt\" -s \";\""
+    }
+  }
+}
