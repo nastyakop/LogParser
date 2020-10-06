@@ -57,7 +57,7 @@ namespace LogParser
             List<string> result = new List<string>();
 
             Regex regExpr = new Regex(search, RegexOptions.IgnoreCase);
-            
+
             foreach (var f in files)
             {
                 string text = f.Value;
@@ -77,7 +77,7 @@ namespace LogParser
             return result;
         }
         /// <summary>
-        /// Возвращает номер строки и строку с найденном паттерном
+        /// Возвращает номер и содержимое строки с найденном паттерном
         /// </summary>
         static string FormResult(string text, int symbolsBeforeEntry, List<string> rows)
         {
@@ -100,13 +100,28 @@ namespace LogParser
             return rows;
         }
 
+        static void Output(List<string> result)
+        {
+            List<string> output = result.Distinct().ToList();
+            FileStream fstream = new FileStream(@"results.txt", FileMode.OpenOrCreate);
+            foreach (var str in output)
+            {
+                
+                byte[] buff = System.Text.Encoding.Default.GetBytes(str+"\n\r");
+                fstream.Write(buff);
+
+                Console.WriteLine(str);
+            }
+            fstream.Close();
+        }
+
         static void Main(string[] args)
         {
             Dictionary<String, String> files = new Dictionary<string, string>();
             string search = "";
             ReadArgs(args, ref files, ref search);
-            List<string> strs = Search(files, search);
-
+            List<string> result = Search(files, search);
+            Output(result);
         }
     }
 }
