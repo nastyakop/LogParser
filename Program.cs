@@ -3,56 +3,38 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using CommandLine;
 
 namespace LogParser
 {
+
     class Program
     {
-        static void ReadArgs(string[] args, ref Dictionary<String, String> files, ref string search)
+        static void ReadArgs(string[] args, ref List<String> files, ref string search)
         {
-            for (int i = 0; i < args.Length; i++)
+            CmdOptions ops = new CmdOptions();
+            Parser.Default.ParseArguments<CmdOptions>(args).WithParsed<CmdOptions>(opts => ops = opts);
+            
+            if(ops.InputPath!=null & ops.InputSearch != null)
             {
-                string sw = args[i];
-
-                switch (sw)
+                string dirPath = ops.InputPath;
+                search = ops.InputSearch;
+                FileAttributes attr = File.GetAttributes(dirPath);
+                if ((attr & FileAttributes.Directory) == FileAttributes.Directory)
                 {
-                    case "-f":
-                        if (i + 1 >= args.Length)
-                        {
-                            Console.WriteLine("Missing argument!");
-                        }
-                        else
-                        {
-                            {
-                                FileAttributes attr = File.GetAttributes(args[i + 1]);
-                                if ((attr & FileAttributes.Directory) == FileAttributes.Directory)
-                                {
-                                    string dir = args[i + 1];
-                                    files = Directory.EnumerateFiles(dir, "*") //все файлы директории
-                                        .ToDictionary(f => f, File.ReadAllText);
-                                }
-                                else
-                                {
-                                    files.Add(args[i + 1], File.ReadAllText(args[i + 1]));
-                                }
-                            }
-                        }
-                        break;
-                    case "-s":
-                        if (i + 1 >= args.Length)
-                        {
-                            Console.WriteLine("Missing argument!");
-                        }
-                        else
-                        {
-                            search = args[i + 1];
-                        }
-                        break;
+                    string dir = dirPath;
+                    // собираем имна файлов
+                    files = Directory.EnumerateFiles(dir, "*").ToList();
+                }
+                else
+                {
+                    files.Add(dirPath);
                 }
             }
         }
 
-        static List<string> Search(Dictionary<String, String> files, string search)
+
+        static List<string> Search(List<String> files, string search)
         {
             List<string> result = new List<string>();
 
@@ -60,8 +42,8 @@ namespace LogParser
 
             foreach (var f in files)
             {
-                string text = f.Value;
-                string fileName = f.Key;
+                string fileName = f;
+                string text = File.ReadAllText(f);
                 List<string> rowsInFile = FormRows(text);
 
                 MatchCollection matches = regExpr.Matches(text);
@@ -106,8 +88,8 @@ namespace LogParser
             FileStream fstream = new FileStream(@"results.txt", FileMode.OpenOrCreate);
             foreach (var str in output)
             {
-                
-                byte[] buff = System.Text.Encoding.Default.GetBytes(str+"\n\r");
+
+                byte[] buff = System.Text.Encoding.Default.GetBytes(str + "\n\r");
                 fstream.Write(buff);
 
                 Console.WriteLine(str);
@@ -117,7 +99,7 @@ namespace LogParser
 
         static void Main(string[] args)
         {
-            Dictionary<String, String> files = new Dictionary<string, string>();
+            List<String> files = new List<String>();
             string search = "";
             ReadArgs(args, ref files, ref search);
             List<string> result = Search(files, search);
